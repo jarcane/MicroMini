@@ -39,21 +39,26 @@
 (define RAM-SIZE (expt 2 ADDRESS-BUS))
 
 ; Instruction Table
-(define INSTRUCTIONS (hash #"\x00" 'NOP   ; No OPeration
-                           #"\x01" 'HLT   ; HaLT
-                           #"\x02" 'DATA  
-                           #"\x10" 'ADD   
+(define INSTRUCTIONS (hash #"\x00" (lambda () (void))   ; No OPeration
+                           #"\x01" (lambda () (set-register-halt! cpu 1))   ; HaLT
+                           #"\x02" (lambda () 
+                                     (set-register-progptr! cpu (add1 (register-progptr cpu)))
+                                     (set-register-progptr! 
+                                      cpu
+                                      (+ (register-progptr cpu)
+                                         (decode (vector-ref ram (register-progptr cpu))))))  ; DATA
+                           #"\x10" 'ADD   ; ADD
                            #"\x20" 'SUB   ; SUBtract
-                           #"\x30" 'AND
-                           #"\x31" 'OR
-                           #"\x32" 'XOR
-                           #"\x33" 'NOT
+                           #"\x30" 'AND   ; AND
+                           #"\x31" 'OR    ; OR
+                           #"\x32" 'XOR   ; XOR
+                           #"\x33" 'NOT   ; NOT
                            #"\x40" 'EQ?   ; EQuals?
                            #"\x41" 'LES?  ; LESser?
                            #"\x42" 'GRT?  ; GReaTer?
-                           #"\x50" 'PUSH  
+                           #"\x50" 'PUSH  ; PUSH
                            #"\x51" 'PUFA  ; PUsh From Address
-                           #"\x60" 'POP
+                           #"\x60" 'POP   ; POP
                            #"\x61" 'POTA  ; POp To Address
                            #"\x70" 'JMP   ; JuMP
                            #"\x71" 'RET   ; RETurn
@@ -105,9 +110,9 @@
   (let loop ()
     (let ([instr (vector-ref ram (register-progptr cpu))]) ; Grab the next instruction
       (execute instr) ; execute the instr
-      (if (equal? instr #"\x01")  ; If instr was HLT, set Halt bit, else incr progptr
-          (set-register-halt! cpu 1)
-          (set-register-progptr! cpu (add1 (register-progptr cpu))))
+      (set-register-progptr! cpu (add1 (register-progptr cpu))) ; increment program register
+      (when (>= (register-progptr cpu) RAM-SIZE) 
+        (set-register-halt! cpu 1)) ; If the program counter reaches the bounds of memory, halt
       (if (byte? (register-cycles cpu))  ; check if the cycle counter is under a byte
           (set-register-cycles! cpu (add1 (register-cycles cpu))) ; incr if so
           (set-register-cycles! cpu 0)))  ; reset if too big
@@ -115,4 +120,4 @@
 
 ; execute - executes a given instruction, with all requisite side effects.
 (define (execute instr)
-  (display (hash-ref INSTRUCTIONS instr)))
+  ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
