@@ -24,8 +24,11 @@
 (define (bits x)
   (make-bytes (/ x 8) 0))
 
-(define (numerate bytes)
-  (integer-bytes->integer bytes #f #t))
+; Turns bytes into integer decimals for internal use by Racket
+(define (decode bytes)
+  (if (= (bytes-length bytes) 1)
+      (bytes-ref bytes 0)
+      (integer-bytes->integer bytes #f #t)))
 
 ;; Main Variables
 
@@ -37,15 +40,16 @@
 
 ; The CPU contains two pointers (program, return), the main stack, 
 ;  and a cycle counter
-(struct register (progptr retptr stkptr cycles)
+(struct register (progptr retptr stkptr cycles halt)
   #:mutable #:transparent)
 
 ; Now we create the initial CPU instance
 (define cpu (register 
-             0 ; program pointer
-             0 ; return pointer
-             -1 ; stack pointer
-             0)) ; Cycle counter
+             0   ; program pointer
+             0   ; return pointer
+             -1  ; stack pointer
+             0   ; Cycle counter
+             0)) ; Halt-bit
 
 ; Create the stack, STACK-SIZE long and DATA-BUS wide
 (define stack (make-vector STACK-SIZE (bits DATA-BUS)))
@@ -68,3 +72,19 @@
   (set-register-stkptr! cpu (sub1 (register-stkptr cpu)))
   ret)
 
+;; Execution cycle
+
+; run - the main run-time loop for the CPU
+; Steps through ram, decoding then executing instruction, then incrementing progptr and cycles
+(define (run)
+  (let loop ()
+    (let ([instr (vector-ref ram (register-progptr cpu))]) ; Grab the next instruction
+      (display instr)
+      (if (equal? instr #"\x01")
+          (set-register-halt! cpu 1)
+          (set-register-progptr! cpu (add1 (register-progptr cpu))))
+      (if (byte? (register-cycles cpu))
+          (set-register-cycles! cpu (add1 (register-cycles cpu)))
+          (set-register-cycles! cpu 0)))
+
+    (when (= (register-halt cpu) 0) (loop)))) ; check the halt bit, and keep running if off
