@@ -38,6 +38,31 @@
 (define STACK-SIZE 16)
 (define RAM-SIZE (expt 2 ADDRESS-BUS))
 
+; Instruction Table
+(define INSTRUCTIONS (hash #"\x00" 'NOP   ; No OPeration
+                           #"\x01" 'HLT   ; HaLT
+                           #"\x02" 'DATA  
+                           #"\x10" 'ADD   
+                           #"\x20" 'SUB   ; SUBtract
+                           #"\x30" 'AND
+                           #"\x31" 'OR
+                           #"\x32" 'XOR
+                           #"\x33" 'NOT
+                           #"\x40" 'EQ?   ; EQuals?
+                           #"\x41" 'LES?  ; LESser?
+                           #"\x42" 'GRT?  ; GReaTer?
+                           #"\x50" 'PUSH  
+                           #"\x51" 'PUFA  ; PUsh From Address
+                           #"\x60" 'POP
+                           #"\x61" 'POTA  ; POp To Address
+                           #"\x70" 'JMP   ; JuMP
+                           #"\x71" 'RET   ; RETurn
+                           #"\x72" 'JIF   ; Jump IF
+                           #"\x80" 'TRMI  ; TeRMinal Input
+                           #"\x81" 'TRWI  ; TeRminal Wait for Input
+                           #"\x90" 'TRMO  ; TeRMinal Output
+                           #"\x98" 'TRWO)) ; TeRminal Wait for Output
+
 ; The CPU contains two pointers (program, return), the main stack, 
 ;  and a cycle counter
 (struct register (progptr retptr stkptr cycles halt)
@@ -79,12 +104,15 @@
 (define (run)
   (let loop ()
     (let ([instr (vector-ref ram (register-progptr cpu))]) ; Grab the next instruction
-      (display instr)
-      (if (equal? instr #"\x01")
+      (execute instr) ; execute the instr
+      (if (equal? instr #"\x01")  ; If instr was HLT, set Halt bit, else incr progptr
           (set-register-halt! cpu 1)
           (set-register-progptr! cpu (add1 (register-progptr cpu))))
-      (if (byte? (register-cycles cpu))
-          (set-register-cycles! cpu (add1 (register-cycles cpu)))
-          (set-register-cycles! cpu 0)))
-
+      (if (byte? (register-cycles cpu))  ; check if the cycle counter is under a byte
+          (set-register-cycles! cpu (add1 (register-cycles cpu))) ; incr if so
+          (set-register-cycles! cpu 0)))  ; reset if too big
     (when (= (register-halt cpu) 0) (loop)))) ; check the halt bit, and keep running if off
+
+; execute - executes a given instruction, with all requisite side effects.
+(define (execute instr)
+  (display (hash-ref INSTRUCTIONS instr)))
