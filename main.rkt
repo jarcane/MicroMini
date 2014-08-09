@@ -17,35 +17,55 @@
 ;    You should have received a copy of the GNU General Public License
 ;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-; Constants
-(define DATA-BUS 8) ; the data bus width
-(define ADDRESS-BUS 16) ; the address bus width
-(define STACK-SIZE 128)
-(define RAM-SIZE (expt 2 ADDRESS-BUS))
+;; Helper Functions
 
 ; Byte-string maker 
 ; given a number of bits that are a multiple of 8, returns bytestring of that many bytes
 (define (bits x)
-  (if (= (modulo x 8) 0)
-      (make-bytes (/ x 8) 0)
-      (error 'Incorrect-bit-multiple)))
+  (make-bytes (/ x 8) 0))
 
-; The following structs are used for organizing the CPU components
+(define (numerate bytes)
+  (integer-bytes->integer bytes #f #t))
+
+;; Main Variables
+
+; Constants
+(define DATA-BUS 8) ; the data bus width
+(define ADDRESS-BUS 16) ; the address bus width
+(define STACK-SIZE 16)
+(define RAM-SIZE (expt 2 ADDRESS-BUS))
 
 ; The CPU contains two pointers (program, return), the main stack, 
 ; A & B internal operand registers for math, and a cycle counter
-(struct register (progptr retptr stkptr stack aop bop cycles)
+(struct register (progptr retptr stkptr aop bop cycles)
   #:mutable #:transparent)
 
-; Now we create the initial CPU instance, using a vector of bytes for the stack
+; Now we create the initial CPU instance
 (define cpu (register 
-             (bits ADDRESS-BUS) ; program pointer
-             (bits ADDRESS-BUS) ; return pointer
-             (bits DATA-BUS) ; stack pointer
-             (make-vector STACK-SIZE (bits DATA-BUS)) ; stack
-             (bits DATA-BUS) ; a-operand register
-             (bits DATA-BUS) ; b-operand register
-             (bits DATA-BUS))) ; Cycle counter
+             0 ; program pointer
+             0 ; return pointer
+             -1 ; stack pointer
+             0 ; a-operand register
+             0 ; b-operand register
+             0)) ; Cycle counter
+
+; Create the stack, STACK-SIZE long and DATA-BUS wide
+(define stack (make-vector STACK-SIZE (bits DATA-BUS)))
 
 ; Next we create the RAM array, a vector of bytes as long as RAM-SIZE
 (define ram (make-vector RAM-SIZE (bits DATA-BUS)))
+
+;; Stack Functions
+
+; push - Takes a bytestring, checks that it's not wider than data-bus, then puts it in the stack
+; moving the pointer to match.
+(define (push bytes)
+  (set-register-stkptr! cpu (add1 (register-stkptr cpu)))
+  (vector-set! stack (register-stkptr cpu) bytes))
+
+; pop - returns the current top value of the stack and removes it, decrementing the stack pointer
+(define (pop)
+  (define ret (vector-ref stack (register-stkptr cpu)))
+  (vector-set! stack (register-stkptr cpu) (bits DATA-BUS))
+  (set-register-stkptr! cpu (sub1 (register-stkptr cpu)))
+  ret)
