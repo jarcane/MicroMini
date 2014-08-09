@@ -36,8 +36,8 @@
 (define RAM-SIZE (expt 2 ADDRESS-BUS))
 
 ; The CPU contains two pointers (program, return), the main stack, 
-; A & B internal operand registers for math, and a cycle counter
-(struct register (progptr retptr stkptr aop bop cycles)
+;  and a cycle counter
+(struct register (progptr retptr stkptr cycles)
   #:mutable #:transparent)
 
 ; Now we create the initial CPU instance
@@ -45,8 +45,6 @@
              0 ; program pointer
              0 ; return pointer
              -1 ; stack pointer
-             0 ; a-operand register
-             0 ; b-operand register
              0)) ; Cycle counter
 
 ; Create the stack, STACK-SIZE long and DATA-BUS wide
@@ -69,3 +67,4 @@
   (vector-set! stack (register-stkptr cpu) (bits DATA-BUS))
   (set-register-stkptr! cpu (sub1 (register-stkptr cpu)))
   ret)
+
