@@ -1,7 +1,5 @@
 #lang racket
 
-(require racket/fixnum)
-
 ; MicroMini - A vintage minicomputer inspired stack machine
 ;
 ; Copyright 2014 John S. Berry III
@@ -19,6 +17,9 @@
 ;    You should have received a copy of the GNU General Public License
 ;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(require racket/fixnum)
+(require (planet neil/charterm:3:1))
+
 ; Constants
 (define DATA-BUS 8) ; the data bus width
 (define DATA-MASK (sub1 (expt 2 DATA-BUS))) ; The bitmask used to constrain add/sub
@@ -26,6 +27,9 @@
 (define ADDRESS-BUS 16) ; the address bus width
 (define STACK-SIZE 16)
 (define RAM-SIZE (expt 2 ADDRESS-BUS))
+
+; Initialize the terminal
+;(define term (open-charterm #:current? #t))
 
 ;; Helper Functions
 
@@ -121,14 +125,16 @@
                                      (set-register-retptr! cpu (+ 2 (register-progptr cpu)))
                                      (set-register-progptr! cpu (sub1 (get-address))))  ; Jump to SubRoutine
                            #"\x72" (lambda ()
-                                     (if (false? (bool->int (pop)))
-                                         (void)
+                                     (if (= (pop) 0)
+                                         (void (get-address))
                                          (set-register-progptr! cpu (sub1 (get-address)))))   ; Jump IF
                            #"\x73" (lambda ()
                                      (set-register-progptr! cpu (register-retptr cpu)))   ; RETurn
-                           #"\x80" 'TRMI  ; TeRMinal Input                           
+                           #"\x80" (lambda ()
+                                     (let ([key (charterm-read-keyinfo)])                                       
+                                       (push (first (charterm-keyinfo-bytelist key)))))  ; TeRMinal Input                           
                            #"\x90" (lambda ()
-                                     (write-byte (pop)))  ; TeRMinal Output
+                                     (charterm-display (bytes (pop))))  ; TeRMinal Output
                            )) 
 
 ; The CPU contains two pointers (program, return), the main stack, 
@@ -186,16 +192,19 @@
     (when (= (register-halt cpu) 0) (loop)))) ; check the halt bit, and keep running if off
 
 ; test program
-(vector-set! ram 0 #"\x50") ; Push 
-(vector-set! ram 1 #"\x69") ; i
-(vector-set! ram 2 #"\x50") ; #Push
-(vector-set! ram 3 #"\x48") ; H
-(vector-set! ram 4 #"\x90") ; TRMO
-(vector-set! ram 5 #"\x90") ; TRMO
-(vector-set! ram 6 #"\x01") ; HLT
-(vector-set! ram 7 #"\x00") 
-(vector-set! ram 8 #"\x00") ; 
-(vector-set! ram 9 #"\x50") ; push
-(vector-set! ram 10 #"\x71") ; 71
-(vector-set! ram 11 #"\x73") ; RET
-(run)
+(vector-set! ram 0 #"\x50") ; PUSH
+(vector-set! ram 1 #"\x0d") ; <cr>
+(vector-set! ram 2 #"\x80") ; TRMI
+(vector-set! ram 3 #"\x40") ; EQ?
+(vector-set! ram 4 #"\x72") ; JIF
+(vector-set! ram 5 #"\x00") ; 
+(vector-set! ram 6 #"\x0B") ; x000b
+(vector-set! ram 7 #"\x00") ; NOP
+(vector-set! ram 8 #"\x70") ; JMP
+(vector-set! ram 9 #"\x00") ; 
+(vector-set! ram 10 #"\x00") ; x0000
+(vector-set! ram 11 #"\x01") ; HLT
+(void (with-charterm 
+ (run)
+ (charterm-newline))
+)
