@@ -1,5 +1,7 @@
 #lang racket
 
+(require racket/fixnum)
+
 ; MicroMini - A vintage minicomputer inspired stack machine
 ;
 ; Copyright 2014 John S. Berry III
@@ -17,6 +19,12 @@
 ;    You should have received a copy of the GNU General Public License
 ;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+; Constants
+(define DATA-BUS 8) ; the data bus width
+(define ADDRESS-BUS 16) ; the address bus width
+(define STACK-SIZE 16)
+(define RAM-SIZE (expt 2 ADDRESS-BUS))
+
 ;; Helper Functions
 
 ; Byte-string maker 
@@ -30,13 +38,17 @@
       (bytes-ref bytes 0)
       (integer-bytes->integer bytes #f #t)))
 
-;; Main Variables
+; Add with overflow, returns fxvector with result and carry flag
+(define (add/overflow a b) 
+  (let ([x (fx+ a b)])
+    (fxvector (fxand #xff x) (fxrshift (fxand #x100 x) DATA-BUS))))
 
-; Constants
-(define DATA-BUS 8) ; the data bus width
-(define ADDRESS-BUS 16) ; the address bus width
-(define STACK-SIZE 16)
-(define RAM-SIZE (expt 2 ADDRESS-BUS))
+; Subtraction with overflow, returns fxvector with result and carry flag
+(define (sub/overflow a b) 
+  (let ([x (fx- a b)]) 
+    (fxvector (fxand #xff x) (fxrshift (fxand #x100 x) DATA-BUS))))
+
+;; Main Variables
 
 ; Instruction Table
 (define INSTRUCTIONS (hash #"\x00" (lambda () (void))   ; No OPeration
@@ -47,8 +59,14 @@
                                       cpu
                                       (+ (register-progptr cpu)
                                          (decode (vector-ref ram (register-progptr cpu))))))  ; DATA
-                           #"\x10" 'ADD   ; ADD
-                           #"\x20" 'SUB   ; SUBtract
+                           #"\x10" (lambda ()
+                                     (let ([result (add/overflow (pop) (pop))])
+                                       (push (fxvector-ref result 0))
+                                       (set-register-carry! cpu (fxvector-ref result 1))))   ; ADD
+                           #"\x20" (lambda ()
+                                     (let ([result (sub/overflow (pop) (pop))])
+                                       (push (fxvector-ref result 0))
+                                       (set-register-carry! cpu (fxvector-ref result 1))))   ; SUBtract
                            #"\x30" 'AND   ; AND
                            #"\x31" 'OR    ; OR
                            #"\x32" 'XOR   ; XOR
@@ -56,7 +74,9 @@
                            #"\x40" 'EQ?   ; EQuals?
                            #"\x41" 'LES?  ; LESser?
                            #"\x42" 'GRT?  ; GReaTer?
-                           #"\x50" 'PUSH  ; PUSH
+                           #"\x50" (lambda ()
+                                     (set-register-progptr! cpu (add1 (register-progptr cpu)))
+                                     (push (decode (vector-ref ram (register-progptr cpu)))))  ; PUSH
                            #"\x51" 'PUFA  ; PUsh From Address
                            #"\x60" 'POP   ; POP
                            #"\x61" 'POTA  ; POp To Address
@@ -65,12 +85,13 @@
                            #"\x72" 'JIF   ; Jump IF
                            #"\x80" 'TRMI  ; TeRMinal Input
                            #"\x81" 'TRWI  ; TeRminal Wait for Input
-                           #"\x90" 'TRMO  ; TeRMinal Output
+                           #"\x90" (lambda ()
+                                     (display (bytes (pop))))  ; TeRMinal Output
                            #"\x98" 'TRWO)) ; TeRminal Wait for Output
 
 ; The CPU contains two pointers (program, return), the main stack, 
 ;  and a cycle counter
-(struct register (progptr retptr stkptr cycles halt)
+(struct register (progptr retptr stkptr cycles carry halt)
   #:mutable #:transparent)
 
 ; Now we create the initial CPU instance
@@ -79,26 +100,30 @@
              0   ; return pointer
              -1  ; stack pointer
              0   ; Cycle counter
+             0   ; Carry flag
              0)) ; Halt-bit
 
-; Create the stack, STACK-SIZE long and DATA-BUS wide
-(define stack (make-vector STACK-SIZE (bits DATA-BUS)))
+; Create the stack, STACK-SIZE long
+; This is kept as integer values internally (rather than bytes) to avoid repetitive decode-encode cycles
+; PUSH/POP instructions instead decode/encode any operations that transmit between RAM or I/O
+(define stack (make-vector STACK-SIZE 0))
 
 ; Next we create the RAM array, a vector of bytes as long as RAM-SIZE
+; This is kept as bytestrings, for easier dumping and hash-referencing of instructions
 (define ram (make-vector RAM-SIZE (bits DATA-BUS)))
 
 ;; Stack Functions
 
-; push - Takes a bytestring, checks that it's not wider than data-bus, then puts it in the stack
+; push - Takes an integer, then puts it in the stack
 ; moving the pointer to match.
-(define (push bytes)
+(define (push num)
   (set-register-stkptr! cpu (add1 (register-stkptr cpu)))
-  (vector-set! stack (register-stkptr cpu) bytes))
+  (vector-set! stack (register-stkptr cpu) num))
 
 ; pop - returns the current top value of the stack and removes it, decrementing the stack pointer
 (define (pop)
   (define ret (vector-ref stack (register-stkptr cpu)))
-  (vector-set! stack (register-stkptr cpu) (bits DATA-BUS))
+  (vector-set! stack (register-stkptr cpu) 0)
   (set-register-stkptr! cpu (sub1 (register-stkptr cpu)))
   ret)
 
@@ -121,3 +146,12 @@
 ; execute - executes a given instruction, with all requisite side effects.
 (define (execute instr)
   ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
+
+(vector-set! ram 0 #"\x50") ; PUSH
+(vector-set! ram 1 #"i") ; 
+(vector-set! ram 2 #"\x50") ; PUSH
+(vector-set! ram 3 #"H") ; #x01
+(vector-set! ram 4 #"\x90") ; TRMO
+(vector-set! ram 5 #"\x90") ; TRMO
+(vector-set! ram 6 #"\x01") ; HALT
+(run)
