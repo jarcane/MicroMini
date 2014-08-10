@@ -40,6 +40,20 @@
       (bytes-ref bytes 0)
       (integer-bytes->integer bytes #f #t)))
 
+; increments the program pointer
+(define (add1-progptr)
+  (set-register-progptr! cpu (add1 (register-progptr cpu))))
+
+; gets an address from the next two bytes in RAM
+(define (get-address)
+  (let ([x 0]
+        [y 0])
+    (add1-progptr)
+    (set! x (vector-ref ram (register-progptr cpu)))
+    (add1-progptr)
+    (set! y (vector-ref ram (register-progptr cpu)))
+    (decode (bytes-append x y))))
+
 ; Add with overflow, returns fxvector with result and carry flag
 (define (add/overflow a b) 
   (let ([x (fx+ a b)])
@@ -56,7 +70,7 @@
 (define INSTRUCTIONS (hash #"\x00" (lambda () (void))   ; No OPeration
                            #"\x01" (lambda () (set-register-halt! cpu 1))   ; HaLT
                            #"\x02" (lambda () 
-                                     (set-register-progptr! cpu (add1 (register-progptr cpu)))
+                                     (add1-progptr)
                                      (set-register-progptr! 
                                       cpu
                                       (+ (register-progptr cpu)
@@ -77,9 +91,10 @@
                            #"\x41" 'LES?  ; LESser?
                            #"\x42" 'GRT?  ; GReaTer?
                            #"\x50" (lambda ()
-                                     (set-register-progptr! cpu (add1 (register-progptr cpu)))
+                                     (add1-progptr)
                                      (push (decode (vector-ref ram (register-progptr cpu)))))  ; PUSH
-                           #"\x51" 'PUFA  ; PUsh From Address
+                           #"\x51" (lambda ()
+                                     (push (decode (vector-ref ram (get-address)))))  ; PUsh From Address
                            #"\x60" 'POP   ; POP
                            #"\x61" 'POTA  ; POp To Address
                            #"\x70" 'JMP   ; JuMP
@@ -137,7 +152,7 @@
   (let loop ()
     (let ([instr (vector-ref ram (register-progptr cpu))]) ; Grab the next instruction
       (execute instr) ; execute the instr
-      (set-register-progptr! cpu (add1 (register-progptr cpu))) ; increment program register
+      (add1-progptr) ; increment program register
       (when (>= (register-progptr cpu) RAM-SIZE) 
         (set-register-halt! cpu 1)) ; If the program counter reaches the bounds of memory, halt
       (if (byte? (register-cycles cpu))  ; check if the cycle counter is under a byte
@@ -149,11 +164,13 @@
 (define (execute instr)
   ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
 
-(vector-set! ram 0 #"\x50") ; PUSH
-(vector-set! ram 1 #"i") ; 
-(vector-set! ram 2 #"\x50") ; PUSH
-(vector-set! ram 3 #"\x01") ; #x01
-(vector-set! ram 4 #"\x10") ; Add
-(vector-set! ram 5 #"\x90") ; TRMO
-(vector-set! ram 6 #"\x01") ; HALT
+(vector-set! ram 0 #"\x51") ; PUSH from address
+(vector-set! ram 1 #"\x00") ; 
+(vector-set! ram 2 #"\x08") ; #x0008
+(vector-set! ram 3 #"\x50") ; PUSH
+(vector-set! ram 4 #"\x01") ; #x01
+(vector-set! ram 5 #"\x10") ; Add
+(vector-set! ram 6 #"\x90") ; TRMO
+(vector-set! ram 7 #"\x01") ; HALT
+(vector-set! ram 8 #"\x49") 
 (run)
