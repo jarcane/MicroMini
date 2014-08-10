@@ -111,14 +111,22 @@
                            #"\x60" (lambda () (pop))   ; POP
                            #"\x61" (lambda ()
                                      (vector-set! ram (get-address) (bytes (pop))))  ; POp To Address
-                           #"\x70" 'JMP   ; JuMP
-                           #"\x71" 'RET   ; RETurn
-                           #"\x72" 'JIF   ; Jump IF
+                           #"\x70" (lambda ()                                     
+                                     (set-register-progptr! cpu (sub1 (get-address))))   ; JuMP
+                           #"\x71" (lambda ()
+                                     (set-register-retptr! cpu (+ 2 (register-progptr cpu)))
+                                     (set-register-progptr! cpu (sub1 (get-address))))  ; Jump to SubRoutine
+                           #"\x72" (lambda ()
+                                     (if (false? (bool->int (pop)))
+                                         (void)
+                                         (set-register-progptr! cpu (sub1 (get-address)))))   ; Jump IF
+                           #"\x73" (lambda ()
+                                     (set-register-progptr! cpu (register-retptr cpu)))   ; RETurn
                            #"\x80" 'TRMI  ; TeRMinal Input
                            #"\x81" 'TRWI  ; TeRminal Wait for Input
                            #"\x90" (lambda ()
                                      (display (bytes (pop))))  ; TeRMinal Output
-                           #"\x98" 'TRWO)) ; TeRminal Wait for Output
+                           #"\x98" (lambda () (void)))) ; TeRminal Wait for Output (unimplemented/useless)
 
 ; The CPU contains two pointers (program, return), the main stack, 
 ;  and a cycle counter
@@ -178,13 +186,16 @@
 (define (execute instr)
   ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
 
-(vector-set! ram 0 #"\x51") ; PUSH from address
+(vector-set! ram 0 #"\x71") ; JSR address
 (vector-set! ram 1 #"\x00") ; 
-(vector-set! ram 2 #"\x08") ; #x0008
-(vector-set! ram 3 #"\x61") ; POTA
-(vector-set! ram 4 #"\x00") ; 
-(vector-set! ram 5 #"\x09") ; #x0009
-(vector-set! ram 6 #"\x00") ; NOP
-(vector-set! ram 7 #"\x01") ; HALT
-(vector-set! ram 8 #"\x49") 
+(vector-set! ram 2 #"\x09") ; #x0009
+(vector-set! ram 3 #"\x90") ; TRMO
+(vector-set! ram 4 #"\x01") ; HLT
+(vector-set! ram 5 #"\x00") ; 
+(vector-set! ram 6 #"\x00") ; 
+(vector-set! ram 7 #"\x00") 
+(vector-set! ram 8 #"\x00") ; 
+(vector-set! ram 9 #"\x50") ; push
+(vector-set! ram 10 #"\x71") ; 71
+(vector-set! ram 11 #"\x73") ; RET
 (run)
