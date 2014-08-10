@@ -53,7 +53,8 @@
 
 ; increments the program pointer
 (define (add1-progptr)
-  (set-register-progptr! cpu (add1 (register-progptr cpu))))
+  (set-register-progptr! cpu (add1 (register-progptr cpu)))
+  (when (>= (register-progptr cpu) RAM-SIZE) (crash-handler "Out of Address")))
 
 ; gets an address from the next two bytes in RAM
 (define (get-address)
@@ -77,7 +78,15 @@
 
 ; execute - executes a given instruction, with all requisite side effects.
 (define (execute instr)
-  ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
+  (if (hash-has-key? INSTRUCTIONS instr)
+      ((hash-ref INSTRUCTIONS instr))  ; looks up the instruction in the INSTRUCTION hash and executes
+      (crash-handler "Invalid Instruction")))
+
+; Crash Handler: takes an error message, dumps key values, and displays it
+(define (crash-handler cause)
+  (charterm-newline)
+  (charterm-display (string-append cause " in " (format "~X" (values (register-progptr cpu)))))
+  (set-register-halt! cpu 1))
 
 ;; Main Variables
 
@@ -167,10 +176,13 @@
 ; moving the pointer to match.
 (define (push num)
   (set-register-stkptr! cpu (add1 (register-stkptr cpu)))
-  (vector-set! stack (register-stkptr cpu) num))
+  (if (> (register-stkptr cpu) STACK-SIZE)
+      (crash-handler "Stack Overflow")
+      (vector-set! stack (register-stkptr cpu) num)))
 
 ; pop - returns the current top value of the stack and removes it, decrementing the stack pointer
 (define (pop)
+  (when (< (register-stkptr cpu) 0) (crash-handler "Stack Underflow"))
   (define ret (vector-ref stack (register-stkptr cpu)))
   (vector-set! stack (register-stkptr cpu) 0)
   (set-register-stkptr! cpu (sub1 (register-stkptr cpu)))
