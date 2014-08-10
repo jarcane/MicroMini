@@ -40,6 +40,12 @@
       (bytes-ref bytes 0)
       (integer-bytes->integer bytes #f #t)))
 
+; Converts a boolean to 1 for #t and 0 for #f
+(define (bool->int x)
+  (if (false? x)
+      0
+      1))
+
 ; increments the program pointer
 (define (add1-progptr)
   (set-register-progptr! cpu (add1 (register-progptr cpu))))
@@ -83,13 +89,20 @@
                                      (let ([result (sub/overflow (pop) (pop))])
                                        (push (fxvector-ref result 0))
                                        (set-register-carry! cpu (fxvector-ref result 1))))   ; SUBtract
-                           #"\x30" 'AND   ; AND
-                           #"\x31" 'OR    ; OR
-                           #"\x32" 'XOR   ; XOR
-                           #"\x33" 'NOT   ; NOT
-                           #"\x40" 'EQ?   ; EQuals?
-                           #"\x41" 'LES?  ; LESser?
-                           #"\x42" 'GRT?  ; GReaTer?
+                           #"\x30" (lambda ()
+                                     (push (bitwise-and (pop) (pop))))   ; AND
+                           #"\x31" (lambda ()
+                                     (push (bitwise-ior (pop) (pop))))    ; OR
+                           #"\x32" (lambda ()
+                                     (push (bitwise-xor (pop) (pop))))   ; XOR
+                           #"\x33" (lambda ()
+                                     (push (bitwise-not (pop))))   ; NOT
+                           #"\x40" (lambda ()
+                                     (push (bool->int (= (pop) (pop)))))   ; EQuals?
+                           #"\x41" (lambda ()
+                                     (push (bool->int (< (pop) (pop)))))  ; LESser?
+                           #"\x42" (lambda ()
+                                     (push (bool->int (> (pop) (pop)))))  ; GReaTer?
                            #"\x50" (lambda ()
                                      (add1-progptr)
                                      (push (decode (vector-ref ram (register-progptr cpu)))))  ; PUSH
