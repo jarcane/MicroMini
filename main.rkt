@@ -70,6 +70,10 @@
   (let ([x (fx- a b)]) 
     (fxvector (fxand DATA-MASK x) (fxrshift (fxand CARRY-MASK x) DATA-BUS))))
 
+; execute - executes a given instruction, with all requisite side effects.
+(define (execute instr)
+  ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
+
 ;; Main Variables
 
 ; Instruction Table
@@ -122,11 +126,10 @@
                                          (set-register-progptr! cpu (sub1 (get-address)))))   ; Jump IF
                            #"\x73" (lambda ()
                                      (set-register-progptr! cpu (register-retptr cpu)))   ; RETurn
-                           #"\x80" 'TRMI  ; TeRMinal Input
-                           #"\x81" 'TRWI  ; TeRminal Wait for Input
+                           #"\x80" 'TRMI  ; TeRMinal Input                           
                            #"\x90" (lambda ()
-                                     (display (bytes (pop))))  ; TeRMinal Output
-                           #"\x98" (lambda () (void)))) ; TeRminal Wait for Output (unimplemented/useless)
+                                     (write-byte (pop)))  ; TeRMinal Output
+                           )) 
 
 ; The CPU contains two pointers (program, return), the main stack, 
 ;  and a cycle counter
@@ -182,17 +185,14 @@
           (set-register-cycles! cpu 0)))  ; reset if too big
     (when (= (register-halt cpu) 0) (loop)))) ; check the halt bit, and keep running if off
 
-; execute - executes a given instruction, with all requisite side effects.
-(define (execute instr)
-  ((hash-ref INSTRUCTIONS instr))) ; looks up the instruction in the INSTRUCTION hash and executes
-
-(vector-set! ram 0 #"\x71") ; JSR address
-(vector-set! ram 1 #"\x00") ; 
-(vector-set! ram 2 #"\x09") ; #x0009
-(vector-set! ram 3 #"\x90") ; TRMO
-(vector-set! ram 4 #"\x01") ; HLT
-(vector-set! ram 5 #"\x00") ; 
-(vector-set! ram 6 #"\x00") ; 
+; test program
+(vector-set! ram 0 #"\x50") ; Push 
+(vector-set! ram 1 #"\x69") ; i
+(vector-set! ram 2 #"\x50") ; #Push
+(vector-set! ram 3 #"\x48") ; H
+(vector-set! ram 4 #"\x90") ; TRMO
+(vector-set! ram 5 #"\x90") ; TRMO
+(vector-set! ram 6 #"\x01") ; HLT
 (vector-set! ram 7 #"\x00") 
 (vector-set! ram 8 #"\x00") ; 
 (vector-set! ram 9 #"\x50") ; push
