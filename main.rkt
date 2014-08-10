@@ -21,6 +21,8 @@
 
 ; Constants
 (define DATA-BUS 8) ; the data bus width
+(define DATA-MASK (sub1 (expt 2 DATA-BUS))) ; The bitmask used to constrain add/sub
+(define CARRY-MASK (expt 2 DATA-BUS)) ; The bitmask used to check for carry
 (define ADDRESS-BUS 16) ; the address bus width
 (define STACK-SIZE 16)
 (define RAM-SIZE (expt 2 ADDRESS-BUS))
@@ -41,12 +43,12 @@
 ; Add with overflow, returns fxvector with result and carry flag
 (define (add/overflow a b) 
   (let ([x (fx+ a b)])
-    (fxvector (fxand #xff x) (fxrshift (fxand #x100 x) DATA-BUS))))
+    (fxvector (fxand DATA-MASK x) (fxrshift (fxand CARRY-MASK x) DATA-BUS))))
 
 ; Subtraction with overflow, returns fxvector with result and carry flag
 (define (sub/overflow a b) 
   (let ([x (fx- a b)]) 
-    (fxvector (fxand #xff x) (fxrshift (fxand #x100 x) DATA-BUS))))
+    (fxvector (fxand DATA-MASK x) (fxrshift (fxand CARRY-MASK x) DATA-BUS))))
 
 ;; Main Variables
 
@@ -150,8 +152,8 @@
 (vector-set! ram 0 #"\x50") ; PUSH
 (vector-set! ram 1 #"i") ; 
 (vector-set! ram 2 #"\x50") ; PUSH
-(vector-set! ram 3 #"H") ; #x01
-(vector-set! ram 4 #"\x90") ; TRMO
+(vector-set! ram 3 #"\x01") ; #x01
+(vector-set! ram 4 #"\x10") ; Add
 (vector-set! ram 5 #"\x90") ; TRMO
 (vector-set! ram 6 #"\x01") ; HALT
 (run)
