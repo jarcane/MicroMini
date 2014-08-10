@@ -18,6 +18,7 @@
 ;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (require racket/fixnum)
+(require racket/cmdline)
 (require (planet neil/charterm:3:1))
 
 ; Constants
@@ -191,20 +192,22 @@
           (set-register-cycles! cpu 0)))  ; reset if too big
     (when (= (register-halt cpu) 0) (loop)))) ; check the halt bit, and keep running if off
 
-; test program
-(vector-set! ram 0 #"\x50") ; PUSH
-(vector-set! ram 1 #"\x0d") ; <cr>
-(vector-set! ram 2 #"\x80") ; TRMI
-(vector-set! ram 3 #"\x40") ; EQ?
-(vector-set! ram 4 #"\x72") ; JIF
-(vector-set! ram 5 #"\x00") ; 
-(vector-set! ram 6 #"\x0B") ; x000b
-(vector-set! ram 7 #"\x00") ; NOP
-(vector-set! ram 8 #"\x70") ; JMP
-(vector-set! ram 9 #"\x00") ; 
-(vector-set! ram 10 #"\x00") ; x0000
-(vector-set! ram 11 #"\x01") ; HLT
+;; Startup behaviors
+
+; Get file to run from command-line
+(define file-to-run
+  (command-line
+   #:args (filename)
+   filename))
+
+; Read the file byte-by-byte into memory
+(let ([index 0]) 
+  (for ([c (in-port read-byte (open-input-file file-to-run))])
+    (vector-set! ram index (bytes c))
+    (set! index (add1 index))))
+
+; Set up terminal and run program
 (void (with-charterm 
- (run)
- (charterm-newline))
-)
+       (run)
+       (charterm-newline))
+      )
