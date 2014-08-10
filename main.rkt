@@ -95,8 +95,9 @@
                                      (push (decode (vector-ref ram (register-progptr cpu)))))  ; PUSH
                            #"\x51" (lambda ()
                                      (push (decode (vector-ref ram (get-address)))))  ; PUsh From Address
-                           #"\x60" 'POP   ; POP
-                           #"\x61" 'POTA  ; POp To Address
+                           #"\x60" (lambda () (pop))   ; POP
+                           #"\x61" (lambda ()
+                                     (vector-set! ram (get-address) (bytes (pop))))  ; POp To Address
                            #"\x70" 'JMP   ; JuMP
                            #"\x71" 'RET   ; RETurn
                            #"\x72" 'JIF   ; Jump IF
@@ -167,10 +168,10 @@
 (vector-set! ram 0 #"\x51") ; PUSH from address
 (vector-set! ram 1 #"\x00") ; 
 (vector-set! ram 2 #"\x08") ; #x0008
-(vector-set! ram 3 #"\x50") ; PUSH
-(vector-set! ram 4 #"\x01") ; #x01
-(vector-set! ram 5 #"\x10") ; Add
-(vector-set! ram 6 #"\x90") ; TRMO
+(vector-set! ram 3 #"\x61") ; POTA
+(vector-set! ram 4 #"\x00") ; 
+(vector-set! ram 5 #"\x09") ; #x0009
+(vector-set! ram 6 #"\x00") ; NOP
 (vector-set! ram 7 #"\x01") ; HALT
 (vector-set! ram 8 #"\x49") 
 (run)
