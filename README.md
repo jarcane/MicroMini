@@ -15,12 +15,15 @@ Usage
 
 From source:
 
+```
  racket main.rkt <mm-binary-file>
+```
 
 From binary:
 
+```
  mmini <mm-binary-file>
-
+```
 MicroMini expects a stream of 8-bit bytes of correct instructions. At present, there is minimal error checking, and MM will crash if you do bad things to its poor widdle head.
 
 Documentation
