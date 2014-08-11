@@ -134,6 +134,8 @@
                                      (push (decode (vector-ref ram (get-address)))))  ; PUsh From Address
                            #"\x52" (lambda ()
                                      (push (register-carry cpu))) ; PUsh CArry
+                           #"\x53" (lambda ()
+                                     (push (register-cycles cpu))) ; PUsh TImer
                            #"\x60" (lambda () (pop))   ; POP
                            #"\x61" (lambda ()
                                      (vector-set! ram (get-address) (bytes (pop))))  ; POp To Address

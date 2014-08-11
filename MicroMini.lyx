@@ -73,7 +73,7 @@ John S.
 \end_layout
 
 \begin_layout Date
-Last updated 10.08.2014
+Last updated 11.08.2014
 \end_layout
 
 \begin_layout Section
@@ -429,6 +429,14 @@ Consumes the next two bytes as an address location, and pushes the value
 
 \begin_layout Standard
 Pushes the current carry flag to the stack.
+\end_layout
+
+\begin_layout Subsection
+#x53 PUTI - PUsh TImer
+\end_layout
+
+\begin_layout Standard
+Pushes the current value of the cycle counter to the stack.
 \end_layout
 
 \begin_layout Subsection
