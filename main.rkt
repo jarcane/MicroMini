@@ -19,6 +19,7 @@
 
 (require racket/fixnum)
 (require racket/cmdline)
+(require racket/format)
 (require (planet neil/charterm:3:1))
 
 ; Constants
@@ -86,12 +87,12 @@
 (define (crash-handler cause)
   (let ([p (num->hex (register-progptr cpu))])
     (charterm-newline)
-    (charterm-display (string-append cause " in " p))
+    (charterm-display (string-append cause " at #x" p))
     (set-register-halt! cpu 1)))
 
 ; Make a number into a hexadecimal string
 (define (num->hex num)
-  (format "~x" num))
+  (~r num #:base 16 #:min-width (/ ADDRESS-BUS 4) #:pad-string "0"))
 
 ;; Main Variables
 
@@ -226,5 +227,7 @@
 ; Set up terminal and run program
 (void (with-charterm 
        (run)
-       (charterm-newline))
-      )
+       (charterm-newline)
+       (crash-handler "Execution ended")
+       (charterm-newline)))
+      
