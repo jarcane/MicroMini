@@ -24,7 +24,7 @@ From binary:
 ```
  mmini <mm-binary-file>
 ```
-MicroMini expects a stream of 8-bit bytes of correct instructions. At present, there is minimal error checking, and MM will crash if you do bad things to its poor widdle head.
+MicroMini expects a stream of 8-bit bytes of correct instructions, which it will execute from address #x0000 to the best of its ability. There is basic checking for a few standard errors: stack over/underflow, and invalid instructions, and MM will halt and report the address the error occured in.
 
 Documentation
 -------------
