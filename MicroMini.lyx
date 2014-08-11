@@ -424,6 +424,14 @@ Consumes the next two bytes as an address location, and pushes the value
 \end_layout
 
 \begin_layout Subsection
+#x52 PUCA - PUsh CArry
+\end_layout
+
+\begin_layout Standard
+Pushes the current carry flag to the stack.
+\end_layout
+
+\begin_layout Subsection
 #x60 POP
 \end_layout
 
