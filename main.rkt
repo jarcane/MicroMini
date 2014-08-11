@@ -84,9 +84,14 @@
 
 ; Crash Handler: takes an error message, dumps key values, and displays it
 (define (crash-handler cause)
-  (charterm-newline)
-  (charterm-display (string-append cause " in " (format "~X" (values (register-progptr cpu)))))
-  (set-register-halt! cpu 1))
+  (let ([p (num->hex (register-progptr cpu))])
+    (charterm-newline)
+    (charterm-display (string-append cause " in " p))
+    (set-register-halt! cpu 1)))
+
+; Make a number into a hexadecimal string
+(define (num->hex num)
+  (format "~x" num))
 
 ;; Main Variables
 
