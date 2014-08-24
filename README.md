@@ -5,6 +5,8 @@ A simple 8-bit virtual stack machine, with basic terminal I/O powered by CharTer
 
 Depends on a unix stty device, and thus only runs in those environs currently.
 
+Update 24-8-14: Does not appear to function on FreeBSD, charterm expects stty options which FreeBSD doesn't have.
+
 Requirements
 ------------
 
