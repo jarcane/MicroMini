@@ -1,0 +1,12 @@
+DATA 12 Hello #x20 World!
+PUFA #x00 #x13
+PUFA #x00 #x02
+TRMO
+PUSH 1
+ADD
+POTA #x00 #x13
+PUFA #x00 #x13
+PUSH #x0e
+GRT?
+JIF #x00 #x0e
+HLT

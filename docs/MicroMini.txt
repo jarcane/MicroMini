@@ -1,0 +1,236 @@
+MicroMini:
+A Racket-powered 8-bit stack machine
+
+John S. Berry III
+
+Last updated 11.08.2014
+
+1 Introduction
+
+The MicroMini is a virtual stack machine inspired by classic 
+minicomputers. It is written in Racket, an excellent 
+Scheme-derived Lisp with a specialty in teaching and new language 
+development. MicroMini is purely stack based: other than memory 
+calls, almost all operations take no arguments, collecting their 
+required operands from the top of the stack. 
+
+1.1 Specifications
+
+The MicroMini is patterned after an imaginary vintage 
+minicomputer, scaled down to home-size. As such, it's basic 
+specifications are thus kept within those limits, save that at 
+present, the device runs at the full speed of the user's computer 
+rather than an artificially limited operation speed.
+
+• 8-bit data bus
+
+• 16-bit address bus
+
+• 64Kib of RAM
+
+• 16-bit pointer-based stack
+
+• 16-bit program and return pointers
+
+• 1-bit halt flag
+
+• 1-bit carry flag 
+
+• 8-bit cycle counter
+
+1.2 Usage and Requirements
+
+At this time, MicroMini only runs on Unix-derived operating 
+systems which provide stty. Future implementations may correct 
+this, however as it stands, there are no Racket libs for Windows 
+platforms which can correctly handle the TRMI and TRMO 
+instructions.
+
+If running the binary, you need only invoke it from the command 
+line, like so:
+
+mmini <mm-binary-file>
+
+Where mm-binary-file is the filename of a previously created 
+binary file composed of 8-bit bytes of MicroMini machine code. 
+Currently there is no compiler or assembler available for 
+MicroMini, but the author intends to create one soon.
+
+If you wish to run MicroMini from the source, you will need to 
+install Racket. The program was created with Racket 6.1, and the 
+author can make no guarantees about backwards compatibility. To 
+install and invoke it, you can do:
+
+> git clone https://github.com/jarcane/MicroMini.git
+
+> cd ./MicroMini
+
+> racket main.rkt <mm-binary-file>
+
+Where, as before, mm-binary-file is a previously created MM 
+binary.
+
+2 MicroMini Operation
+
+On invocation, MicroMini will take the target file, read it byte 
+by byte into memory, and begin executing from address #x0000. It 
+will continue to run through valid instructions until it reaches 
+the end of the RAM bank, it is given a HLT instruction, or there 
+is an error. I/O at this point comes purely via terminal, handled 
+via the TRMI and TRMO instructions.
+
+Each cycle, the MicroMini:
+
+1. Executes the instruction found at the address designated by 
+  the program counter
+
+2. Increments the program pointer by 1
+
+3. Checks if the program pointer has reached the end of ram space 
+  and, if so, sets the halt-bit
+
+4. Checks the cycle counter:
+
+  (a) If full, resets to 0
+
+  (b) If not, increments by 1
+
+5. Checks the halt-bit, and stops execution if set
+
+3 MicroMini Instructions
+
+The following are the standard instructions currently implemented 
+in MicroMini, with descriptions of their operation. 
+
+3.1 #x00 NOP - No OPeration
+
+Does nothing, and will be skipped by the processor.
+
+3.2 #x01 HLT - HaLT
+
+Sets the halt-bit on the processor, which will cause it to end 
+operation at the end of the cycle.
+
+3.3 #x02 DATA num
+
+Consumes the next byte, and increments the program pointer by num 
+spaces, essentially skipping over that many bytes in RAM.
+
+3.4 #x10 ADD
+
+Pops the top two values in the stack, adds them, and pushes the 
+result to the stack. If there has been an overflow, the carry-bit 
+is set. 
+
+3.5 #x20 SUB
+
+Pops the top two values in the stack, subtracts the top value 
+from the one below it, and pushes the result to the stack. If 
+there is an underflow, the carry-bit is set.
+
+3.6 #x30 AND
+
+Pops the top two values in the stack, ANDs their bits, and pushes 
+the result to the stack.
+
+3.7 #x31 OR
+
+Pops the top two values in the stack, ORs their bits, and pushes 
+the result to the stack.
+
+3.8 #x32 XOR
+
+Pops the top two values in the stack, XORs their bits, and pushes 
+the result to the stack.
+
+3.9 #x33 NOT
+
+Pops the top value from the stack, applies NOT, and pushes the 
+result to the stack.
+
+3.10 #x40 EQ? - EQual?
+
+Pops the top two values from the stack, and compares them. If 
+they are equal, pushes 0x01 to the stack. If not equal, pushes 
+0x00.
+
+3.11 #x41 LES? - LESser?
+
+Pops the top two values from the stack, and compares the top 
+value to the one below it. If the top value is lesser, pushes 
+0x01 to the stack. If the top value is greater, pushes 0x00 to 
+the stack.
+
+3.12 #x42 GRT? - GReaTer?
+
+Pops the top two values from the stack, and compares the top 
+value to the one below it. If the top value is greater, pushes 
+0x01 to the stack. If the top value is lesser, pushes 0x00 to the 
+stack.
+
+3.13 #x50 PUSH num
+
+Consumes the next byte of ram, and pushes the value to the stack.
+
+3.14 #x51 PUFA address - PUsh From Address
+
+Consumes the next two bytes as an address location, and pushes 
+the value at that address to the stack.
+
+3.15 #x52 PUCA - PUsh CArry
+
+Pushes the current carry flag to the stack.
+
+3.16 #x53 PUTI - PUsh TImer
+
+Pushes the current value of the cycle counter to the stack.
+
+3.17 #x60 POP
+
+Consumes the top value from the stack.
+
+3.18 #x61 POTA address - POp To Address
+
+Consumes the next two bytes as an address location, pops the 
+value from the top of the stack, and stores at at that address.
+
+3.19 #x70 JMP address - JuMP
+
+Consumes the next two bytes as an address location, and sets the 
+program pointer to continue execution from that address on the 
+next cycle.
+
+3.20 #x71 JSR address - Jump to SubRoutine
+
+Stores the current program pointer (skipping itself) to the 
+return pointer, consumes the next two bytes as an address 
+location, then sets the program pointer to continue execution at 
+that address on the next cycle. Note that the return pointer does 
+not actually point to the original location, but rather the 
+location just past the original JSR instruction and its address, 
+in order to prevent unbreakable loops.
+
+3.21 #x72 JIF address - Jump IF
+
+Pops the top value of the stack. If it is 0x01, it consumes the 
+next two bytes as an address, then sets the program pointer to 
+continue execution from that address on the next cycle. 
+Otherwise, it skips the next two bytes (to avoid attempting to 
+execute the address values), but otherwise does nothing.
+
+3.22 #x73 RET - Return
+
+Sets the program pointer equal to the return pointer, thus 
+causing the CPU to resume execution just past the original JSR on 
+the next cycle.
+
+3.23 #x80 TRMI - TeRMinal Input
+
+Waits for the terminal to send a byte of input, then pushes that 
+byte to the stack.
+
+3.24 #x90 TRMO
+
+Pops the top value of the stack, and sends the byte to the 
+terminal as output. 
+
